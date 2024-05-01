@@ -1,0 +1,136 @@
+!pip install nltk
+
+
+import nltk
+nltk.download('stopwords')
+
+
+import nltk
+nltk.download('wordnet')
+
+
+from nltk.corpus import stopwords
+stop_words = stopwords.words('english')
+
+# Función de preprocesamiento modificada para usar las stopwords
+#def preprocess(text):
+    text = text.lower()
+    text = ''.join([char for char in text if char.isalpha() or char.isspace()])
+    words = text.split()
+    words = [word for word in words if word not in stop_words]
+    # Continúa con el resto de tu procesamiento...
+    return ' '.join(words)
+
+
+def preprocess(text):
+    # Asegurarse de que el texto es una cadena
+    if not isinstance(text, str):
+        return ''  # Devuelve una cadena vacía si no es un string
+    text = text.lower()
+    text = ''.join([char for char in text if char.isalpha() or char.isspace()])
+    words = text.split()
+    # Aquí continúa tu preprocesamiento...
+    return ' '.join(words)
+
+
+#Dado que el archivo contenia numerosos articulos,
+#se decidio  optimizar la funcion preprocess usando procesamiento en paralelo para otimizar dicho tiempo, 
+#ya que se tradaba alrededor de 20 minutos sin incluir dicha función
+
+import concurrent.futures
+import pandas as pd
+
+def preprocess(text):
+    
+    return text
+
+
+def process_chunk(chunk):
+    return chunk['full_text'].apply(preprocess)
+
+def parallel_preprocess(df, n_cores=4):
+    chunk_size = int(np.ceil(len(df) / n_cores))
+    chunks = [df.iloc[chunk_size * i: chunk_size * (i + 1)] for i in range(n_cores)]
+    
+    with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
+        result = pd.concat(executor.map(process_chunk, chunks))
+    
+    return result
+
+
+papers['full_text_clean'] = parallel_preprocess(papers)
+
+
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import matplotlib.pyplot as plt
+
+# Cargar los datos
+papers = pd.read_csv('/content/papers (1).csv', encoding='ISO-8859-1')
+
+papers = pd.read_csv('/content/papers (1).csv')
+
+# Preprocesamiento del texto
+def preprocess(text):
+    # Asegurarse de que el texto es una cadena
+    if not isinstance(text, str):
+        return ''  # Devuelve una cadena vacía si no es un string
+    text = text.lower()
+    text = ''.join([char for char in text if char.isalpha() or char.isspace()])
+    words = text.split()
+    # Aquí continúa tu preprocesamiento...
+    return ' '.join(words)
+
+
+
+
+papers['full_text_clean'] = papers['full_text'].apply(preprocess)
+
+# TF-IDF
+tfidf_vectorizer = TfidfVectorizer(max_features=10000)
+tfidf_matrix = tfidf_vectorizer.fit_transform(papers['full_text_clean'])
+
+# Extraer las 10 palabras clave principales por documento
+feature_array = np.array(tfidf_vectorizer.get_feature_names_out())
+for i in range(tfidf_matrix.shape[0]):
+    tfidf_sorting = np.argsort(tfidf_matrix[i].toarray()).flatten()[::-1]
+    top_n = feature_array[tfidf_sorting][:10]
+    print(f"Document {i+1} top words: {top_n}")
+
+
+
+def plot_keywords_by_timeframe(start_year, end_year, interval):
+    fig, ax = plt.subplots()
+    for period_start in range(start_year, end_year, interval):
+        period_end = period_start + interval
+        period_papers = papers[(papers['year'] >= period_start) & (papers['year'] < period_end)]
+        
+        if period_papers.empty:
+            continue
+        
+        tfidf_vectorizer = TfidfVectorizer(max_features=10000)
+        tfidf_matrix = tfidf_vectorizer.fit_transform(period_papers['full_text_clean'])
+        summed_tfidf = np.sum(tfidf_matrix, axis=0).A1  
+        
+        top_indices = np.argsort(summed_tfidf)[-30:]  
+        top_terms = np.array(tfidf_vectorizer.get_feature_names_out())[top_indices]  
+        top_scores = summed_tfidf[top_indices] 
+        
+        # Ordenamos los términos y sus scores para la visualización
+        ordered_indices = top_scores.argsort()
+        top_terms = top_terms[ordered_indices]
+        top_scores = top_scores[ordered_indices]
+        
+        ax.barh(top_terms, top_scores, label=f'{period_start}-{period_end}')
+    
+    ax.legend()
+    ax.set_xlabel('TF-IDF Score')
+    ax.set_title('Top 30 Keywords by Time Period')
+    plt.show()
+
+plot_keywords_by_timeframe(1987, 2019, 5)
+
+
